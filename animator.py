@@ -2,8 +2,10 @@ import tensorflow as tf
 import plotly.graph_objects as go
 from matplotlib.animation import FuncAnimation as fani
 import numpy as np
-from random import random
 
+# the animator class keeps a list of losses from different epochs,
+# and displays this as a graph in the browser.
+# this helps to decide whether model training should be halted
 class animator:
 
     def __init__(self, max_history=5, max_loss=None):
