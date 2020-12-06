@@ -297,3 +297,117 @@ def make_model(r_a, r_b, r_c, r_d, depth):
     return model
 
 
+def make_model(r_a, r_b, r_c, r_d, depth):
+    """
+    This model mimics the above model, only with 3D oriented kernels.
+    It is therefore obligatory that it uses less parameters.
+    
+    Result: 
+    """
+    X_conv_a = tf.keras.layers.Input((2 * r_a + 1, 2 * r_a + 1, depth, 1))
+
+    filters = 16
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X_conv_a)
+    X = residual_block(X, 3, [filters, filters, filters], s=1, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters], s=2, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters], s=1, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters], s=2, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X)
+    X_a = tf.keras.layers.Flatten()(X)
+
+
+    X_conv_b = tf.keras.layers.Input((2 * r_b + 1, 2 * r_b + 1, depth, 1))
+
+    filters = 32
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X_conv_b)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters], s=1, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters], s=2, is_convolutional_block=True)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X)
+    X_b = tf.keras.layers.Flatten()(X)
+
+
+    X_conv_c = tf.keras.layers.Input((2 * r_c + 1, 2 * r_c + 1, depth, 1))
+
+    filters = 32
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X_conv_c)
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = residual_block(X, 3, [filters, filters, filters])
+    X = tf.keras.layers.AveragePooling3D(pool_size=(1, 1, 1))(X)
+    X_c = tf.keras.layers.Flatten()(X)
+
+    X_conv_d = tf.keras.layers.Input((2 * r_d + 1, 2 * r_d + 1, depth, 1))
+    X = tf.keras.layers.Flatten()(X_conv_d)
+
+    d_neurons = 1024
+
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X_d = tf.keras.layers.Dense(d_neurons, "relu")(X)
+
+    concat = tf.keras.layers.Concatenate()([X_a, X_b, X_c, X_d]) #
+
+    d_neurons = 512
+
+    X = tf.keras.layers.Dense(d_neurons, "relu")(concat)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+    X = tf.keras.layers.Dense(d_neurons, "relu")(X)
+
+    concat = tf.keras.layers.Lambda(lambda x: x/500)(concat) # get those 350_000 neurons to count for about 700
+
+    X = tf.keras.layers.Concatenate()([concat, X])
+
+    X = tf.keras.layers.Dense(depth)(X)
+
+    model = tf.keras.models.Model(inputs=[X_conv_a, X_conv_b, X_conv_c, X_conv_d], outputs=X, name='SortOfResNet50')
+    return model
+
+
