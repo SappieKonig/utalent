@@ -30,34 +30,52 @@ def get_map(size, index):
     def map_to_place(ra_index, dec_index, z_index, data, size):
         temp_map = np.zeros((size, size, 10), dtype=np.float64)
         for i in np.arange(len(data)):
-            if i % 1000000 == 0:
-                print(i)
+            # we select indices from the arrays
             x, y, z = ra_index[i], dec_index[i], z_index[i]
-            # dump[x, y, z] = 10**(data[i, 10]) 
-            temp_map[x, y, z] = data[i, 4]
+            
+            # we use these indices to assign the mass to its corresponding position
+            temp_map[x, y, z] += 10**(data[i, 10]) 
+            
+        # give this temporary map back so it can be added to the real map
         return temp_map.astype(np.float64)
 
     def data_to_map(data, size):
+        # we filter out all the entries that do not fall within our scope, 
+        # there are some entries in the dataset with -270 degrees,
+        # that shouldn't be in there
         between = (0 < data[:, 2]) * (data[:, 2] < 90) * (0 < data[:, 3]) * (data[:, 3] < 90) * (0.07296 < data[:, 7]) * (data[:, 7] < 1.41708)
         data = data[np.where(between)]
+        
+        # get the indexes by redistributing it from 0-90 to 0-16383 
         ra_index = (data[:, 2] / 90 * size).astype(np.int32)
         dec_index = (data[:, 3] / 90 * size).astype(np.int32)
         d_z = 1.41708 - 0.07296
+        
+        # get the indexes by redistributing it from 0.07296-1.41708 to 0-9
         z_index = ((data[:, 7]-.07296) / d_z * 10).astype(np.int32)
+        
+        # using these indices we can fill in our temp_map
         return map_to_place(ra_index, dec_index, z_index, data, size)
 
+    # here we load the MICECATv2.0 dataset. Using memmap avoids out of memory errors
     dat = Table.read("/home/ignace/datasets/8336.fits", format='fits', memmap=True)
+    
+    # we load the data by batch to avoid memory errors
     batch_size = 50_000_000
     for i in range(500_000_000 // batch_size):
-        print(i)
+        # we select a piece of the file and process it using the above functions
         file = dat[i * batch_size:(i + 1) * batch_size].to_pandas()
         result = data_to_map(file.to_numpy(), size)
+        
+        # the result is added to the map, to get a complete picture in the end
         map += result
         
+    # the map is saved in the right directory
     np.save("/home/ignace/datasets/"+str(size)+"x"+str(size)+"x10_real_"+columns[index]+".npy", map)
 
+    # here we show the map to make sure everything went according to plan
     plt.imshow(map.mean(2))
     plt.show()
 
 
-get_map(size, 4)
+get_map(size, 10)
