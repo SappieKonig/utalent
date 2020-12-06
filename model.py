@@ -194,7 +194,7 @@ def make_model(r_a, r_b, r_c, r_d, depth):
     but also that the exact distance matters less and less when getting further away from the origin.
     So what we do is: we select 4 patches. One with radius 40, one with radius 20, one with radius 10
     and one with radius 5. Each of these gets their own subnetwork, with increasingly little compression.
-    These 
+    The outputs of these subnetworks get concatenated together to form one big network.
     Furthermore, we increase the size of the network in every dimension.
     
     Result: 0.00042
