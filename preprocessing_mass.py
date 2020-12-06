@@ -1,3 +1,6 @@
+# this file creates the 16384x16384x10 grid for the mass
+
+
 from astropy.table import Table
 import numpy as np
 import numba
