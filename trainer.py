@@ -1,5 +1,8 @@
 import numpy as np
-from model import get_model
+import animator
+from model import make_model
+import tqdm
+import animator
 
 # the following loads a model from memory to train on
 model = tf.keras.models.load_model("/home/ignace/tensorTestModels/please_just_work_for_once_2D_v2")
@@ -57,63 +60,77 @@ var2_d = ran.reshape((dia_d, dia_d), order="C").flatten()
 options1_d = np.array([var1_d + i + r_a - r_d for i in range(len(mass)-2*r_a)])
 options2_d = np.array([var2_d + i + r_a - r_d for i in range(len(mass)-2*r_a)])
 
+# this make_model() function can be used when we do not have a trained model in memory
+# or when we want to try out a new architecture. The function returns a model
 # model = make_model(r_a, r_b, r_c, r_d, depth)
-# model.build((None, dia, dia, depth))
+
+# the optimizer decides how the weights are udpated
+# the parameter given to the optimizer is the learning rate, in this case 3e-4
 optimizer = tf.keras.optimizers.Adam(3e-4)
+
+# configuring the model
 model.compile(optimizer)
 model.summary()
+
+# with neural networks, one epoch means going through the entire dataset once
+# since we do not have that amount of time, we define an epoch as being 100.000
+# entries from the dataset
 epoch_size = 100_000
+
+# the animator shows the progress of the neural network, by graphing the value of the MSE
 an = animator.animator()
 for _ in range(10000):
 
+    # selects 100.000 random entries from the dataset
     choices = np.random.choice(np.arange(len(indices)), epoch_size, False)
-
     choices = indices[choices]
+    
+    # to stabilize training we update the weights by calculating the average desired change over 64 entries
     batch_size = 64
+    
+    # the amount of batches is determined by how many batches can fit into the size of one epoch. The // operator divides and rounds down.
     batches = epoch_size//batch_size
+    
+    # an array to keep track of the loss over time
     loss_arr = np.zeros(batches)
     for batch in tqdm.trange(batches):
+        # select the dataset entries belonging to this batch
         batch_choices = choices[batch*batch_size:(batch+1)*batch_size, :]
 
+        # these four variables grab the context from the grid with decreasing radii
         net_input_a = mass[options1_a[batch_choices[:, 0] - r_a], options2_a[batch_choices[:, 1]-r_a]].reshape(-1, dia_a, dia_a, depth).astype(np.float32)
         net_input_b = mass[options1_b[batch_choices[:, 0] - r_a], options2_b[batch_choices[:, 1] - r_a]].reshape(-1, dia_b, dia_b, depth).astype(np.float32)
         net_input_c = mass[options1_c[batch_choices[:, 0] - r_a], options2_c[batch_choices[:, 1] - r_a]].reshape(-1, dia_c, dia_c, depth).astype(np.float32)
         net_input_d = mass[options1_d[batch_choices[:, 0] - r_a], options2_d[batch_choices[:, 1] - r_a]].reshape(-1, dia_d, dia_d, depth).astype(np.float32)
 
+        # the desired output, the true convergence, is taken from the convergence grid
         net_output = conv[batch_choices[:, 0], batch_choices[:, 1]].reshape(-1, depth).astype(np.float32)
         with tf.GradientTape() as tape:
+            # the model predicts the convergence by processing the input
             output = model([net_input_a, net_input_b, net_input_c, net_input_d])
+            
+            # the mean square error is computed
             loss = (net_output - output)**2
+            
+            # because most of the pixels do not contain a value for convergence,
+            # as there are 5 times as many pixels as galaxies in the dataset,
+            # we have to remove the pixels without convergence from the loss, as to not bias our network
             loss = loss * (net_output != 0)
             loss = tf.reduce_sum(loss, axis=-1)
+            
+        # lets tensorflow calculate and process the gradients with respect to the loss
         train_vars = model.trainable_variables
         grads = tape.gradient(loss, train_vars)
         optimizer.apply_gradients(zip(grads, train_vars))
+        
+        # saves the loss, so it can later be displayed to show how good the network is doing
         loss_arr[batch] = np.sum(loss)/np.count_nonzero(loss)
-    print("loss:", np.mean(loss_arr))
+        
+    # show the average loss over the entire epoch
     loss = np.mean(loss_arr)
+    print("loss:", loss)
+    
+    # makes a graph of the loss, to show whether the model is still improving
     an.push(loss)
     tf.keras.models.save_model(model, "/home/ignace/tensorTestModels/please_just_work_for_once_2D_v2")
 
-spacing = 500
-width = len(mass) - 2*r_a
-pixels = width//spacing + 1
-positions = np.arange(0, width, spacing)
-
-ran = np.tile(positions, pixels)
-var1 = ran.reshape((pixels, pixels), order="F").flatten()
-var2 = ran.reshape((pixels, pixels), order="C").flatten()
-
-batch_choices = np.stack([var1, var2], axis=1)
-
-net_input_a = mass[options1_a[batch_choices[:, 0] - r_a], options2_a[batch_choices[:, 1]-r_a]].reshape(-1, dia_a, dia_a, depth).astype(np.float32)
-net_input_b = mass[options1_b[batch_choices[:, 0] - r_a], options2_b[batch_choices[:, 1] - r_a]].reshape(-1, dia_b, dia_b, depth).astype(np.float32)
-net_input_c = mass[options1_c[batch_choices[:, 0] - r_a], options2_c[batch_choices[:, 1] - r_a]].reshape(-1, dia_c, dia_c, depth).astype(np.float32)
-net_input_d = mass[options1_d[batch_choices[:, 0] - r_a], options2_d[batch_choices[:, 1] - r_a]].reshape(-1, dia_d, dia_d, depth).astype(np.float32)
-
-output = model([net_input_a, net_input_b, net_input_c, net_input_d]).numpy()
-
-output = output.reshape((pixels, pixels, 10))
-output = np.average(output, axis=2)
-plt.imshow(output)
-plt.show()
