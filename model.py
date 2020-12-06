@@ -196,8 +196,11 @@ def make_model(r_a, r_b, r_c, r_d, depth):
     and one with radius 5. Each of these gets their own subnetwork, with increasingly little compression.
     The outputs of these subnetworks get concatenated together to form one big network.
     Furthermore, we increase the size of the network in every dimension.
+    As one last change we go from 3D to 2D. 2D is much less computationally intensive,
+    which allows us to train bigger models. We do run into the drawback of having less spatial information.
+    2D networks do not fully use the spatial information along the z-axis. 
     
-    Result: 0.00042
+    Result: 0.00045
     """
     X_conv_a = tf.keras.layers.Input((2 * r_a + 1, 2 * r_a + 1, depth))
 
