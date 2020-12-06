@@ -29,6 +29,7 @@ def get_map(size, index):
     # when going through the dataset
     map = np.zeros((size, size, 10), dtype=np.float64)
 
+    # this @numba.njit translates the function directly into machine code for a considerable speedup
     @numba.njit
     def map_to_place(ra_index, dec_index, z_index, data, size):
         temp_map = np.zeros((size, size, 10), dtype=np.float64)
